@@ -12,6 +12,7 @@ uniform vec3 LightPos;        //light position, normalized
 uniform vec4 LightColor;      //light RGBA -- alpha is intensity
 uniform vec4 AmbientColor;    //ambient RGBA -- alpha is intensity 
 uniform vec3 Falloff;         //attenuation coefficients
+uniform int spec_n;
 
 void main() {
 	//RGBA of our diffuse color
@@ -22,7 +23,7 @@ void main() {
 	
 	//The delta position of light
 	vec3 LightDir = vec3(LightPos.xy - (gl_FragCoord.xy / Resolution.xy), LightPos.z);
-	
+
 	//Correct for aspect ratio
 	LightDir.x *= Resolution.x / Resolution.y;
 	
@@ -42,9 +43,20 @@ void main() {
 	
 	//calculate attenuation
 	float Attenuation = 1.0 / ( Falloff.x + (Falloff.y*D) + (Falloff.z*D*D) );
-	
+
+    // ############# BLINN PHONG ###############
+    // todo: see https://en.wikipedia.org/wiki/Blinn%E2%80%93Phong_shading_model for full parameters!!!
+   	vec3 ViewDir  = vec3(vec2(0.5, 0.5) - (gl_FragCoord.xy / Resolution.xy), 0.1);
+   	vec3 V = normalize(ViewDir);
+   	vec3 H = normalize(V + L);
+   	vec3 Specular = (LightColor.rgb * LightColor.a) * pow(max(dot(N, H), 0.0), spec_n);
+    // ############# BLINN PHONG ###############
+
+    // todo: try https://www.codeandweb.com/spriteilluminator
+    // todo: try SpriteLamp
+
 	//the calculation which brings it all together
-	vec3 Intensity = Ambient + Diffuse * Attenuation;
+	vec3 Intensity = Ambient + Diffuse * Attenuation + Specular * Attenuation;
 	vec3 FinalColor = DiffuseColor.rgb * Intensity;
 	gl_FragColor = vColor * vec4(FinalColor, DiffuseColor.a);
 
@@ -55,7 +67,7 @@ void main() {
 	// R reflexionsrichtung
 	// V blickrichtung betrachter
 	// rau: n < 32
-	// glat n > 32
+	// glatt n > 32
 	// basic blinn-phong: https://de.wikipedia.org/wiki/Blinn-Beleuchtungsmodell
 	// V Punkt zu Betrachter
 	// L Punkt zu Lichtquelle

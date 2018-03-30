@@ -22,25 +22,30 @@ public class Game extends ApplicationAdapter implements ApplicationListener {
 
     //our constants...
     public static final float DEFAULT_LIGHT_Z = 0.075f;
-    public static final float AMBIENT_INTENSITY = 0.2f;
-    public static float LIGHT_INTENSITY = 1f;
+    public static final float AMBIENT_INTENSITY = 0.5f;
+    public static float LIGHT_INTENSITY = 0.5f;
 
     public static final Vector3 LIGHT_POS = new Vector3(0f,0f,DEFAULT_LIGHT_Z);
 
     //Light RGB and intensity (alpha)
-    public static final Vector3 LIGHT_COLOR = new Vector3(1f, 0.6f, 0.3f);
+//    public static final Vector3 LIGHT_COLOR = new Vector3(1f, 0.6f, 0.3f);
+    public static final Vector3 LIGHT_COLOR = new Vector3(0.8f, 0.8f, 0.8f);
 
     //Ambient RGB and intensity (alpha)
-    public static final Vector3 AMBIENT_COLOR = new Vector3(0.6f, 0.6f, 1f);
+    public static final Vector3 AMBIENT_COLOR = new Vector3(0.6f, 0.6f, 0.6f);
 
     //Attenuation coefficients for light falloff
     public static final Vector3 FALLOFF = new Vector3(.2f, 2f, 5f);
     private OrthographicCamera cam;
-    
+    private int spec_n = 1;
+    private ShaderProgram s;
+
     @Override
 	public void create () {
-		rock      = new Texture(Gdx.files.internal("rock.png"));
-		rock_norm = new Texture(Gdx.files.internal("rock_normal.png"));
+        rock      = new Texture(Gdx.files.internal("rock.png"));
+        rock_norm = new Texture(Gdx.files.internal("rock_normal.png"));
+		rock      = new Texture(Gdx.files.internal("wall.jpg"));
+		rock_norm = new Texture(Gdx.files.internal("wall_normal.jpg"));
 
         ShaderProgram.pedantic = false;
         shader = new ShaderProgram(Gdx.files.internal("shader.vert").readString(), Gdx.files.internal("shader.frag").readString());
@@ -111,6 +116,12 @@ public class Game extends ApplicationAdapter implements ApplicationListener {
 		if (Gdx.input.isKeyPressed(Input.Keys.ESCAPE)) {
 		    System.exit(0);
         }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
+            spec_n += 15;
+            if (spec_n > 70) {
+                spec_n = 1;
+            }
+        }
 
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
@@ -124,11 +135,11 @@ public class Game extends ApplicationAdapter implements ApplicationListener {
         LIGHT_POS.y = y + (torchRand.nextFloat() - .5f) * 0.01f;
 
         LIGHT_INTENSITY = (float)clamp(LIGHT_INTENSITY+(torchRand.nextFloat()-.5)/10,0.5, 1);
-        System.out.println(LIGHT_INTENSITY);
 
         //send a Vector4f to GLSL
         shader.setUniformf("LightPos", LIGHT_POS);
         shader.setUniformf("LightColor", LIGHT_COLOR.x, LIGHT_COLOR.y, LIGHT_COLOR.z, LIGHT_INTENSITY);
+        shader.setUniformi("spec_n", spec_n);
 
         //bind normal map to texture unit 1
         rock_norm.bind(1);
@@ -137,7 +148,11 @@ public class Game extends ApplicationAdapter implements ApplicationListener {
         //important that we specify 0 otherwise we'll still be bound to glActiveTexture(GL_TEXTURE1)
         rock.bind(0);
 
-        batch.setShader(shader);
+        if (Gdx.input.isKeyJustPressed(Input.Keys.S)) {
+            s = (shader.equals(s) ? null : shader);
+            batch.setShader(s);
+        }
+
         batch.draw(rock, 10, 10, 500, 350);
 
 		batch.end();
