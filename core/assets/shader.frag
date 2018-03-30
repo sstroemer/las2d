@@ -47,4 +47,17 @@ void main() {
 	vec3 Intensity = Ambient + Diffuse * Attenuation;
 	vec3 FinalColor = DiffuseColor.rgb * Intensity;
 	gl_FragColor = vColor * vec4(FinalColor, DiffuseColor.a);
+
+
+	// ANMERKUNG BASIC PHONG:
+	// https://de.wikipedia.org/wiki/Phong-Beleuchtungsmodell
+	// Ispec = (n+2)/(2pi)*(R dot V)^n
+	// R reflexionsrichtung
+	// V blickrichtung betrachter
+	// rau: n < 32
+	// glat n > 32
+	// basic blinn-phong: https://de.wikipedia.org/wiki/Blinn-Beleuchtungsmodell
+	// V Punkt zu Betrachter
+	// L Punkt zu Lichtquelle
+	// phi = N dot (V+L)/(norm(V+L))
 }

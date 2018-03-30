@@ -2,6 +2,7 @@ package com.las2d;
 
 import com.badlogic.gdx.*;
 import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -10,6 +11,8 @@ import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.GdxRuntimeException;
 
 import java.util.Random;
+
+import static com.badlogic.gdx.math.MathUtils.clamp;
 
 public class Game extends ApplicationAdapter implements ApplicationListener {
 	SpriteBatch batch;
@@ -20,20 +23,20 @@ public class Game extends ApplicationAdapter implements ApplicationListener {
     //our constants...
     public static final float DEFAULT_LIGHT_Z = 0.075f;
     public static final float AMBIENT_INTENSITY = 0.2f;
-    public static final float LIGHT_INTENSITY = 1f;
+    public static float LIGHT_INTENSITY = 1f;
 
     public static final Vector3 LIGHT_POS = new Vector3(0f,0f,DEFAULT_LIGHT_Z);
 
     //Light RGB and intensity (alpha)
-    public static final Vector3 LIGHT_COLOR = new Vector3(1f, 0.8f, 0.6f);
+    public static final Vector3 LIGHT_COLOR = new Vector3(1f, 0.6f, 0.3f);
 
     //Ambient RGB and intensity (alpha)
     public static final Vector3 AMBIENT_COLOR = new Vector3(0.6f, 0.6f, 1f);
 
     //Attenuation coefficients for light falloff
-    public static final Vector3 FALLOFF = new Vector3(.4f, 3f, 20f);
-
-
+    public static final Vector3 FALLOFF = new Vector3(.2f, 2f, 5f);
+    private OrthographicCamera cam;
+    
     @Override
 	public void create () {
 		rock      = new Texture(Gdx.files.internal("rock.png"));
@@ -41,7 +44,12 @@ public class Game extends ApplicationAdapter implements ApplicationListener {
 
         ShaderProgram.pedantic = false;
         shader = new ShaderProgram(Gdx.files.internal("shader.vert").readString(), Gdx.files.internal("shader.frag").readString());
-        //shader = new ShaderProgram(VERT, FRAG);
+
+        if (!shader.isCompiled())
+            throw new GdxRuntimeException("Could not compile shader: "+shader.getLog());
+        //print any warnings
+        if (shader.getLog().length()!=0)
+            System.out.println(shader.getLog());
 
         //setup default uniforms
         shader.begin();
@@ -58,8 +66,12 @@ public class Game extends ApplicationAdapter implements ApplicationListener {
         //LibGDX likes us to end the shader program
         shader.end();
 
-        batch = new SpriteBatch(1000, shader);
+        batch = new SpriteBatch();
         batch.setShader(shader);
+
+        cam = new OrthographicCamera(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        cam.setToOrtho(false);
+
 
         //handle mouse wheel
         Gdx.input.setInputProcessor(new InputAdapter() {
@@ -70,6 +82,16 @@ public class Game extends ApplicationAdapter implements ApplicationListener {
                 return true;
             }
         });
+    }
+
+    @Override
+    public void resize(int width, int height) {
+        cam.setToOrtho(false, width, height);
+        batch.setProjectionMatrix(cam.combined);
+
+        shader.begin();
+        shader.setUniformf("Resolution", width, height);
+        shader.end();
     }
 
 	// todo: IMPORTANT. READ THIS. COMIC STYLE SHADER.
@@ -83,7 +105,7 @@ public class Game extends ApplicationAdapter implements ApplicationListener {
     //      http://www.wholehog-games.com/devblog/2013/06/07/lighting-in-a-2d-game/
     //      http://kingunderthemounta.in/dev-blog-2-let-there-be-light/
 
-
+    Random torchRand = new Random();
 	@Override
 	public void render () {
 		if (Gdx.input.isKeyPressed(Input.Keys.ESCAPE)) {
@@ -96,13 +118,17 @@ public class Game extends ApplicationAdapter implements ApplicationListener {
 
         //update light position, normalized to screen resolution
         float x = Gdx.input.getX() / (float)Gdx.graphics.getWidth();
-        float y = Gdx.input.getY() / (float)Gdx.graphics.getHeight();
+        float y = 1.0f - Gdx.input.getY() / (float)Gdx.graphics.getHeight();
 
-        LIGHT_POS.x = x;
-        LIGHT_POS.y = y;
+        LIGHT_POS.x = x + (torchRand.nextFloat() - .5f) * 0.01f;
+        LIGHT_POS.y = y + (torchRand.nextFloat() - .5f) * 0.01f;
+
+        LIGHT_INTENSITY = (float)clamp(LIGHT_INTENSITY+(torchRand.nextFloat()-.5)/10,0.5, 1);
+        System.out.println(LIGHT_INTENSITY);
 
         //send a Vector4f to GLSL
         shader.setUniformf("LightPos", LIGHT_POS);
+        shader.setUniformf("LightColor", LIGHT_COLOR.x, LIGHT_COLOR.y, LIGHT_COLOR.z, LIGHT_INTENSITY);
 
         //bind normal map to texture unit 1
         rock_norm.bind(1);
@@ -111,7 +137,9 @@ public class Game extends ApplicationAdapter implements ApplicationListener {
         //important that we specify 0 otherwise we'll still be bound to glActiveTexture(GL_TEXTURE1)
         rock.bind(0);
 
-		renderBoxes();
+        batch.setShader(shader);
+        batch.draw(rock, 10, 10, 500, 350);
+
 		batch.end();
 	}
 	
