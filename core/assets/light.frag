@@ -14,6 +14,8 @@ uniform vec4 AmbientColor;    //ambient RGBA -- alpha is intensity
 uniform vec3 Falloff;         //attenuation coefficients
 uniform int spec_n;
 
+#define M_PI 3.1415926535897932384626433832795
+
 void main() {
 	//RGBA of our diffuse color
 	vec4 DiffuseColor = texture2D(u_texture, vTexCoord);
@@ -44,19 +46,30 @@ void main() {
 	//calculate attenuation
 	float Attenuation = 1.0 / ( Falloff.x + (Falloff.y*D) + (Falloff.z*D*D) );
 
+    bool fastPhong = false;
+
     // ############# BLINN PHONG ###############
     // todo: see https://en.wikipedia.org/wiki/Blinn%E2%80%93Phong_shading_model for full parameters!!!
-   	vec3 ViewDir  = vec3(vec2(0.5, 0.5) - (gl_FragCoord.xy / Resolution.xy), 0.1);
-   	vec3 V = normalize(ViewDir);
-   	vec3 H = normalize(V + L);
-   	vec3 Specular = (LightColor.rgb * LightColor.a) * pow(max(dot(N, H), 0.0), spec_n);
+    vec3 Specular;
+    if (fastPhong) {
+   	    vec3 ViewDir  = vec3(vec2(0.5, 0.5) - (gl_FragCoord.xy / Resolution.xy), 0.1);
+   	    vec3 V = normalize(ViewDir);
+   	    vec3 H = normalize(V + L);
+   	    Specular = (LightColor.rgb * LightColor.a) * pow(max(dot(N, H), 0.0), spec_n);
+   	}
+   	else {
+   	    vec3 ViewDir  = vec3(vec2(0.5, 0.5) - (gl_FragCoord.xy / Resolution.xy), 0.1);
+        vec3 V = -normalize(ViewDir);
+   	    vec3 R = L - 2.0 * dot(L, N) * N;
+   	    Specular = (LightColor.rgb * LightColor.a) * (spec_n+2.0)/(2.0*M_PI) * pow(max(dot(R, V), 0.0), spec_n);
+   	}
     // ############# BLINN PHONG ###############
 
     // todo: try https://www.codeandweb.com/spriteilluminator
     // todo: try SpriteLamp
 
 	//the calculation which brings it all together
-	vec3 Intensity = Ambient + Diffuse * Attenuation + Specular * Attenuation;
+	vec3 Intensity = Ambient + Diffuse * Attenuation + Specular;// * Attenuation;
 	vec3 FinalColor = DiffuseColor.rgb * Intensity;
 	gl_FragColor = vColor * vec4(FinalColor, DiffuseColor.a);
 

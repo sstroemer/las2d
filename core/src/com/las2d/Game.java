@@ -16,7 +16,7 @@ import static com.badlogic.gdx.math.MathUtils.clamp;
 
 public class Game extends ApplicationAdapter implements ApplicationListener {
 	SpriteBatch batch;
-	Texture rock, rock_norm;
+	Texture rock, rock_norm, drop, drop_alpha, waterFg, waterBg;
 
     ShaderProgram shader;
 
@@ -42,13 +42,17 @@ public class Game extends ApplicationAdapter implements ApplicationListener {
 
     @Override
 	public void create () {
-        rock      = new Texture(Gdx.files.internal("rock.png"));
-        rock_norm = new Texture(Gdx.files.internal("rock_normal.png"));
-		rock      = new Texture(Gdx.files.internal("wall.jpg"));
-		rock_norm = new Texture(Gdx.files.internal("wall_normal.jpg"));
+        rock       = new Texture(Gdx.files.internal("rock.png"));
+        rock_norm  = new Texture(Gdx.files.internal("rock_normal.png"));
+        drop       = new Texture(Gdx.files.internal("rain/drop-color.png"));
+        drop_alpha = new Texture(Gdx.files.internal("rain/drop-alpha.png"));
+        waterBg    = new Texture(Gdx.files.internal("rain/texture-bg.png"));
+        waterFg    = new Texture(Gdx.files.internal("rain/texture-fg.png"));
+		//rock      = new Texture(Gdx.files.internal("wall.jpg"));
+		//rock_norm = new Texture(Gdx.files.internal("wall_normal.jpg"));
 
         ShaderProgram.pedantic = false;
-        shader = new ShaderProgram(Gdx.files.internal("shader.vert").readString(), Gdx.files.internal("shader.frag").readString());
+        shader = new ShaderProgram(Gdx.files.internal("shader.vert").readString(), Gdx.files.internal("rain.frag").readString());
 
         if (!shader.isCompiled())
             throw new GdxRuntimeException("Could not compile shader: "+shader.getLog());
@@ -153,7 +157,22 @@ public class Game extends ApplicationAdapter implements ApplicationListener {
             batch.setShader(s);
         }
 
-        batch.draw(rock, 10, 10, 500, 350);
+        rock.bind(2);
+        shader.setUniformi("u_textureBg", 2);
+
+        waterFg.bind(1);
+        shader.setUniformi("u_textureFg", 1);
+
+        drop.bind(0);
+        shader.setUniformi("u_waterMap", 0);
+
+        //
+        //
+        //batch.setShader(null);
+        //batch.draw(rock, 0, 0, 800, 600);
+        batch.setShader(shader);
+
+        batch.draw(drop_alpha, 200, 200);
 
 		batch.end();
 	}
