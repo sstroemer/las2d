@@ -21,12 +21,12 @@ public class Game extends ApplicationAdapter implements ApplicationListener {
 	SpriteBatch batch;
 	Texture rock, rock_norm, drop, drop_alpha, waterFg, waterBg;
 
-    ShaderProgram shader;
+    ShaderProgram s_rain, s_light;
 
     //our constants...
     public static final float DEFAULT_LIGHT_Z = 0.075f;
-    public static final float AMBIENT_INTENSITY = 0.5f;
-    public static float LIGHT_INTENSITY = 0.5f;
+    public static final float AMBIENT_INTENSITY = 0.9f;
+    public static float LIGHT_INTENSITY = 0.2f;
 
     public static final Vector3 LIGHT_POS = new Vector3(0f,0f,DEFAULT_LIGHT_Z);
 
@@ -44,6 +44,7 @@ public class Game extends ApplicationAdapter implements ApplicationListener {
     private ShaderProgram s;
 
     FrameBuffer fbo;
+    private Texture shine;
 
     @Override
 	public void create () {
@@ -53,37 +54,38 @@ public class Game extends ApplicationAdapter implements ApplicationListener {
         drop_alpha = new Texture(Gdx.files.internal("rain/drop-alpha.png"));
         waterBg    = new Texture(Gdx.files.internal("rain/texture-bg.png"));
         waterFg    = new Texture(Gdx.files.internal("rain/texture-fg.png"));
+        shine    = new Texture(Gdx.files.internal("rain/drop-shine.png"));
 		//rock      = new Texture(Gdx.files.internal("wall.jpg"));
 		//rock_norm = new Texture(Gdx.files.internal("wall_normal.jpg"));
 
         fbo = new FrameBuffer(Pixmap.Format.RGBA8888, 800, 600, false);
 
         ShaderProgram.pedantic = false;
-        shader = new ShaderProgram(Gdx.files.internal("shader.vert").readString(), Gdx.files.internal("light.frag").readString());
+        s_rain = new ShaderProgram(Gdx.files.internal("shader.vert").readString(), Gdx.files.internal("rain.frag").readString());
+        s_light = new ShaderProgram(Gdx.files.internal("shader.vert").readString(), Gdx.files.internal("light.frag").readString());
 
-        if (!shader.isCompiled())
-            throw new GdxRuntimeException("Could not compile shader: "+shader.getLog());
+        if (!s_rain.isCompiled())
+            throw new GdxRuntimeException("Could not compile shader: "+s_rain.getLog());
         //print any warnings
-        if (shader.getLog().length()!=0)
-            System.out.println(shader.getLog());
+        if (s_rain.getLog().length()!=0)
+            System.out.println(s_rain.getLog());
 
         //setup default uniforms
-        shader.begin();
+        s_light.begin();
 
         //our normal map
-        shader.setUniformi("u_normals", 1); //GL_TEXTURE1
+        s_light.setUniformi("u_normals", 1); //GL_TEXTURE1
 
         //light/ambient colors
         //LibGDX doesn't have Vector4 class at the moment, so we pass them individually...
-        shader.setUniformf("LightColor", LIGHT_COLOR.x, LIGHT_COLOR.y, LIGHT_COLOR.z, LIGHT_INTENSITY);
-        shader.setUniformf("AmbientColor", AMBIENT_COLOR.x, AMBIENT_COLOR.y, AMBIENT_COLOR.z, AMBIENT_INTENSITY);
-        shader.setUniformf("Falloff", FALLOFF);
+        s_light.setUniformf("LightColor", LIGHT_COLOR.x, LIGHT_COLOR.y, LIGHT_COLOR.z, LIGHT_INTENSITY);
+        s_light.setUniformf("AmbientColor", AMBIENT_COLOR.x, AMBIENT_COLOR.y, AMBIENT_COLOR.z, AMBIENT_INTENSITY);
+        s_light.setUniformf("Falloff", FALLOFF);
 
         //LibGDX likes us to end the shader program
-        shader.end();
+        s_light.end();
 
         batch = new SpriteBatch();
-        batch.setShader(shader);
 
         cam = new OrthographicCamera(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         cam.setToOrtho(false);
@@ -105,9 +107,9 @@ public class Game extends ApplicationAdapter implements ApplicationListener {
         cam.setToOrtho(false, width, height);
         batch.setProjectionMatrix(cam.combined);
 
-        shader.begin();
-        shader.setUniformf("Resolution", width, height);
-        shader.end();
+        s_light.begin();
+        s_light.setUniformf("Resolution", width, height);
+        s_light.end();
     }
 
 	// todo: IMPORTANT. READ THIS. COMIC STYLE SHADER.
@@ -122,6 +124,7 @@ public class Game extends ApplicationAdapter implements ApplicationListener {
     //      http://kingunderthemounta.in/dev-blog-2-let-there-be-light/
 
     Random torchRand = new Random();
+    float dy = 800;
 	@Override
 	public void render () {
 		if (Gdx.input.isKeyPressed(Input.Keys.ESCAPE)) {
@@ -134,7 +137,7 @@ public class Game extends ApplicationAdapter implements ApplicationListener {
             }
         }
 
-        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+
 
 
         //update light position, normalized to screen resolution
@@ -147,9 +150,11 @@ public class Game extends ApplicationAdapter implements ApplicationListener {
         LIGHT_INTENSITY = (float)clamp(LIGHT_INTENSITY+(torchRand.nextFloat()-.5)/10,0.5, 1);
 
         //send a Vector4f to GLSL
-        shader.setUniformf("LightPos", LIGHT_POS);
-        shader.setUniformf("LightColor", LIGHT_COLOR.x, LIGHT_COLOR.y, LIGHT_COLOR.z, LIGHT_INTENSITY);
-        shader.setUniformi("spec_n", spec_n);
+        s_light.begin();
+        s_light.setUniformf("LightPos", LIGHT_POS);
+        s_light.setUniformf("LightColor", LIGHT_COLOR.x, LIGHT_COLOR.y, LIGHT_COLOR.z, LIGHT_INTENSITY);
+        s_light.setUniformi("spec_n", spec_n);
+        s_light.end();
 
         //bind normal map to texture unit 1
         rock_norm.bind(1);
@@ -158,50 +163,47 @@ public class Game extends ApplicationAdapter implements ApplicationListener {
         //important that we specify 0 otherwise we'll still be bound to glActiveTexture(GL_TEXTURE1)
         rock.bind(0);
 
-        if (Gdx.input.isKeyJustPressed(Input.Keys.S)) {
-            s = (shader.equals(s) ? null : shader);
-            batch.setShader(s);
-        }
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         //batch.setShader(shader);
-        batch.setShader(null);
         fbo.begin();
-        batch.begin();
-        batch.draw(rock, 0, 0, 800, 600);
-        batch.end();
+            Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+
+            batch.begin();
+                batch.setShader(s_light);
+                batch.draw(rock, 0, 0, 800, 600);
+            batch.end();
         fbo.end();
-        /*
-        rock.bind(2);
-        shader.setUniformi("u_textureBg", 2);
 
-        waterFg.bind(1);
-        shader.setUniformi("u_textureFg", 1);
 
-        drop.bind(0);
-        shader.setUniformi("u_waterMap", 0);
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-        //
-        //
-        batch.setShader(shader);
-
-        batch.draw(drop_alpha, 200, 200);
-        */
 
         batch.begin();
 
         TextureRegion tex = new TextureRegion(fbo.getColorBufferTexture());
         tex.flip(false, true);
 
-        batch.setShader(shader);
+        batch.setShader(null);
+        batch.draw(tex, 0, 0);
+
+        batch.setShader(s_rain);
+
+        shine.bind(3);
+        s_rain.setUniformi("u_shine", 3);
+
+        // the texture doesn't get flipped!!
+        tex.getTexture().bind(2);
+        s_rain.setUniformi("u_background", 2);
 
         drop.bind(1);
-        shader.setUniformi("u_drop", 1);
+        s_rain.setUniformi("u_drop", 1);
 
-        tex.getTexture().bind(0);
-        shader.setUniformi("u_background", 0);
+        drop_alpha.bind(0);
 
-        batch.draw(tex, 0, 0);
-        batch.draw(drop_alpha, 100, 100);
+        //batch.setBlendFunction(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+        batch.draw(drop_alpha, 100, dy--);
+        if (dy < 0) dy = 600;
 
 		batch.end();
 	}
