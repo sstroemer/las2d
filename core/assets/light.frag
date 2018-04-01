@@ -52,13 +52,13 @@ void main() {
     // todo: see https://en.wikipedia.org/wiki/Blinn%E2%80%93Phong_shading_model for full parameters!!!
     vec3 Specular;
     if (fastPhong) {
-   	    vec3 ViewDir  = vec3(vec2(0.5, 0.5) - (gl_FragCoord.xy / Resolution.xy), 0.1);
+   	    vec3 ViewDir = vec3(0.0, 0.0, 1.0); //vec3(vec2(0.5, 0.5) - (gl_FragCoord.xy / Resolution.xy), 0.1);
    	    vec3 V = normalize(ViewDir);
    	    vec3 H = normalize(V + L);
    	    Specular = (LightColor.rgb * LightColor.a) * pow(max(dot(N, H), 0.0), spec_n);
    	}
    	else {
-   	    vec3 ViewDir  = vec3(vec2(0.5, 0.5) - (gl_FragCoord.xy / Resolution.xy), 0.1);
+   	    vec3 ViewDir = vec3(0.0, 0.0, 1.0); //vec3(vec2(0.5, 0.5) - (gl_FragCoord.xy / Resolution.xy), 0.1);
         vec3 V = -normalize(ViewDir);
    	    vec3 R = L - 2.0 * dot(L, N) * N;
    	    Specular = (LightColor.rgb * LightColor.a) * (spec_n+2.0)/(2.0*M_PI) * pow(max(dot(R, V), 0.0), spec_n);
@@ -69,7 +69,7 @@ void main() {
     // todo: try SpriteLamp
 
 	//the calculation which brings it all together
-	vec3 Intensity = Ambient + Diffuse * Attenuation + Specular;// * Attenuation;
+	vec3 Intensity = Ambient + Diffuse * Attenuation + Specular * Attenuation;
 	vec3 FinalColor = DiffuseColor.rgb * Intensity;
 	gl_FragColor = vColor * vec4(FinalColor, DiffuseColor.a);
 

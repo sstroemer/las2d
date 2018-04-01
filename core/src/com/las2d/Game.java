@@ -3,9 +3,12 @@ package com.las2d;
 import com.badlogic.gdx.*;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.graphics.glutils.FrameBuffer;
 import com.badlogic.gdx.graphics.glutils.ShaderProgram;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.GdxRuntimeException;
@@ -29,16 +32,18 @@ public class Game extends ApplicationAdapter implements ApplicationListener {
 
     //Light RGB and intensity (alpha)
 //    public static final Vector3 LIGHT_COLOR = new Vector3(1f, 0.6f, 0.3f);
-    public static final Vector3 LIGHT_COLOR = new Vector3(0.8f, 0.8f, 0.8f);
+    public static final Vector3 LIGHT_COLOR = new Vector3(0.8f, 0.45f, 0.0f);
 
     //Ambient RGB and intensity (alpha)
     public static final Vector3 AMBIENT_COLOR = new Vector3(0.6f, 0.6f, 0.6f);
 
     //Attenuation coefficients for light falloff
-    public static final Vector3 FALLOFF = new Vector3(.2f, 2f, 5f);
+    public static final Vector3 FALLOFF = new Vector3(.2f, 1f, 2f);
     private OrthographicCamera cam;
     private int spec_n = 1;
     private ShaderProgram s;
+
+    FrameBuffer fbo;
 
     @Override
 	public void create () {
@@ -51,8 +56,10 @@ public class Game extends ApplicationAdapter implements ApplicationListener {
 		//rock      = new Texture(Gdx.files.internal("wall.jpg"));
 		//rock_norm = new Texture(Gdx.files.internal("wall_normal.jpg"));
 
+        fbo = new FrameBuffer(Pixmap.Format.RGBA8888, 800, 600, false);
+
         ShaderProgram.pedantic = false;
-        shader = new ShaderProgram(Gdx.files.internal("shader.vert").readString(), Gdx.files.internal("rain.frag").readString());
+        shader = new ShaderProgram(Gdx.files.internal("shader.vert").readString(), Gdx.files.internal("light.frag").readString());
 
         if (!shader.isCompiled())
             throw new GdxRuntimeException("Could not compile shader: "+shader.getLog());
@@ -129,7 +136,6 @@ public class Game extends ApplicationAdapter implements ApplicationListener {
 
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-		batch.begin();
 
         //update light position, normalized to screen resolution
         float x = Gdx.input.getX() / (float)Gdx.graphics.getWidth();
@@ -157,6 +163,14 @@ public class Game extends ApplicationAdapter implements ApplicationListener {
             batch.setShader(s);
         }
 
+        //batch.setShader(shader);
+        batch.setShader(null);
+        fbo.begin();
+        batch.begin();
+        batch.draw(rock, 0, 0, 800, 600);
+        batch.end();
+        fbo.end();
+        /*
         rock.bind(2);
         shader.setUniformi("u_textureBg", 2);
 
@@ -168,11 +182,26 @@ public class Game extends ApplicationAdapter implements ApplicationListener {
 
         //
         //
-        //batch.setShader(null);
-        //batch.draw(rock, 0, 0, 800, 600);
         batch.setShader(shader);
 
         batch.draw(drop_alpha, 200, 200);
+        */
+
+        batch.begin();
+
+        TextureRegion tex = new TextureRegion(fbo.getColorBufferTexture());
+        tex.flip(false, true);
+
+        batch.setShader(shader);
+
+        drop.bind(1);
+        shader.setUniformi("u_drop", 1);
+
+        tex.getTexture().bind(0);
+        shader.setUniformi("u_background", 0);
+
+        batch.draw(tex, 0, 0);
+        batch.draw(drop_alpha, 100, 100);
 
 		batch.end();
 	}
