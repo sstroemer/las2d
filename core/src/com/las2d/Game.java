@@ -52,7 +52,7 @@ public class Game extends ApplicationAdapter implements ApplicationListener {
 		//rock_norm = new Texture(Gdx.files.internal("wall_normal.jpg"));
 
         ShaderProgram.pedantic = false;
-        shader = new ShaderProgram(Gdx.files.internal("shader.vert").readString(), Gdx.files.internal("rain.frag").readString());
+        shader = new ShaderProgram(Gdx.files.internal("shader.vert").readString(), Gdx.files.internal("light.frag").readString());
 
         if (!shader.isCompiled())
             throw new GdxRuntimeException("Could not compile shader: "+shader.getLog());
@@ -157,6 +157,10 @@ public class Game extends ApplicationAdapter implements ApplicationListener {
             batch.setShader(s);
         }
 
+        batch.setShader(shader);
+        batch.draw(rock, 0, 0, 800, 600);
+
+        /*
         rock.bind(2);
         shader.setUniformi("u_textureBg", 2);
 
@@ -168,11 +172,10 @@ public class Game extends ApplicationAdapter implements ApplicationListener {
 
         //
         //
-        //batch.setShader(null);
-        //batch.draw(rock, 0, 0, 800, 600);
         batch.setShader(shader);
 
         batch.draw(drop_alpha, 200, 200);
+        */
 
 		batch.end();
 	}
