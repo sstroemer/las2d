@@ -202,7 +202,6 @@ public class Game extends ApplicationAdapter implements ApplicationListener {
 
         batch.draw(tex, 0, 0);
         batch.draw(drop_alpha, 100, 100);
-        int x = 3;
 
 		batch.end();
 	}
