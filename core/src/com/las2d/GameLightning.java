@@ -17,7 +17,7 @@ import java.util.Random;
 
 import static com.badlogic.gdx.math.MathUtils.clamp;
 
-public class Game extends ApplicationAdapter implements ApplicationListener {
+public class GameLightning extends ApplicationAdapter implements ApplicationListener {
 	SpriteBatch batch;
 	Texture rock, rock_norm, drop, drop_alpha, waterFg, waterBg;
 
@@ -61,8 +61,8 @@ public class Game extends ApplicationAdapter implements ApplicationListener {
         fbo = new FrameBuffer(Pixmap.Format.RGBA8888, 800, 600, false);
 
         ShaderProgram.pedantic = false;
-        s_rain = new ShaderProgram(Gdx.files.internal("shader.vert").readString(), Gdx.files.internal("rain.frag").readString());
-        s_light = new ShaderProgram(Gdx.files.internal("shader.vert").readString(), Gdx.files.internal("light.frag").readString());
+        s_rain = new ShaderProgram(Gdx.files.internal("shaders/passthrough.vert").readString(), Gdx.files.internal("shaders/rain.frag").readString());
+        s_light = new ShaderProgram(Gdx.files.internal("shaders/passthrough.vert").readString(), Gdx.files.internal("shaders/light.frag").readString());
 
         if (!s_rain.isCompiled())
             throw new GdxRuntimeException("Could not compile shader: "+s_rain.getLog());
@@ -166,16 +166,16 @@ public class Game extends ApplicationAdapter implements ApplicationListener {
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         //batch.setShader(shader);
-        fbo.begin();
+        //fbo.begin();
             Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
             batch.begin();
                 batch.setShader(s_light);
                 batch.draw(rock, 0, 0, 800, 600);
             batch.end();
-        fbo.end();
+        //fbo.end();
 
-
+/*
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
 
@@ -206,6 +206,7 @@ public class Game extends ApplicationAdapter implements ApplicationListener {
         if (dy < 0) dy = 600;
 
 		batch.end();
+		*/
 	}
 	
 	@Override
