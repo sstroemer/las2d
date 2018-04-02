@@ -13,6 +13,7 @@ import com.badlogic.gdx.graphics.glutils.FrameBuffer;
 import com.badlogic.gdx.graphics.glutils.ShaderProgram;
 
 import java.awt.*;
+import java.awt.geom.Point2D;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.Random;
@@ -30,13 +31,13 @@ public class GameRainIngame extends ApplicationAdapter implements ApplicationLis
 
     long startTime;
 
-    LinkedList<Point> drops;
+    ArrayList<Point2D.Float> drops;
 
     @Override
     public void create () {
         rects = new ArrayList<>();
         batch = new SpriteBatch();
-        drops = new LinkedList<>();
+        drops = new ArrayList<>();
 
         shBlack.pedantic = false;
         shBlack = new ShaderProgram(Gdx.files.internal("shaders/passthrough.vert").readString(), Gdx.files.internal("shaders/black.frag").readString());
@@ -65,23 +66,38 @@ public class GameRainIngame extends ApplicationAdapter implements ApplicationLis
     }
 
     float dropCreationCounter = 0;
-    final float dropTimer = 1.0f / 10.0f;
-    final float dx = 50.0f;
-    final float dy = 200.0f;
+    final float dropTimer = 1.0f / 20.0f;
+    final float dx = 20.0f;
+    final float dy = -200.0f;
 
     @Override
     public void render () {
         dropCreationCounter += Gdx.graphics.getDeltaTime();
         if (dropCreationCounter >= dropTimer) {
             dropCreationCounter -= dropTimer;
-            drops.add(new Point(rand.nextInt(800), 630));
+            drops.add(new Point2D.Float(rand.nextInt(800), 630));
         }
-        for (Point pt : drops) {
+
+        ArrayList<Integer> del = new ArrayList<>();
+        for (int i = 0; i < drops.size(); i++) {
+            Point2D.Float pt = drops.get(i);
             pt.x += dx * Gdx.graphics.getDeltaTime();
-            pt.y -= dy * Gdx.graphics.getDeltaTime();
+            pt.y += dy * Gdx.graphics.getDeltaTime();
             if (pt.y < 0) {
-                //drops.remove(pt);
+                del.add(i);
             }
+            else {
+                for (Rectangle rect : rects) {
+                    if (pt.x < rect.x || pt.y > rect.y + rect.height || pt.x > rect.x + rect.width || pt.y < rect.y) {
+                        continue;
+                    }
+                    del.add(i);
+                    break;
+                }
+            }
+        }
+        for (int i = del.size()-1; i >= 0; i--) {
+            drops.remove((int)del.get(i));
         }
 
         if (Gdx.input.isKeyPressed(Input.Keys.ESCAPE)) {
@@ -90,7 +106,6 @@ public class GameRainIngame extends ApplicationAdapter implements ApplicationLis
 
         Gdx.gl.glClearColor( 0.7f, 0.7f, 0.7f, 1 );
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-        batch.setBlendFunction(GL20.GL_ONE, GL20.GL_ZERO);
 
         batch.begin();
 
@@ -100,7 +115,7 @@ public class GameRainIngame extends ApplicationAdapter implements ApplicationLis
         }
 
         batch.setShader(shRain);
-        for (Point pt : drops) {
+        for (Point2D.Float pt : drops) {
             batch.draw(texRect, pt.x, pt.y, 10, 10);
         }
 
