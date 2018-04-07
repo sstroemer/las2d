@@ -33,6 +33,8 @@ public class GameRainIngame extends ApplicationAdapter implements ApplicationLis
 
     ArrayList<Point2D.Float> drops;
 
+    Texture drop;
+
     @Override
     public void create () {
         rects = new ArrayList<>();
@@ -47,7 +49,7 @@ public class GameRainIngame extends ApplicationAdapter implements ApplicationLis
         shRain = new ShaderProgram(Gdx.files.internal("shaders/passthrough.vert").readString(), Gdx.files.internal("shaders/rain_ingame.frag").readString());
         System.out.println(shRain.getLog());
 
-        fbo = new FrameBuffer(Pixmap.Format.RGBA8888, 800, 600, false);
+        drop       = new Texture(Gdx.files.internal("raindrop.png"));
 
 
         for (int i = 0; i < 7; i++) {
@@ -66,14 +68,14 @@ public class GameRainIngame extends ApplicationAdapter implements ApplicationLis
     }
 
     float dropCreationCounter = 0;
-    final float dropTimer = 1.0f / 20.0f;
-    final float dx = 20.0f;
-    final float dy = -200.0f;
+    final float dropTimer = 1.0f / 200.0f;
+    final float dx = -75.0f;
+    final float dy = -500.0f;
 
     @Override
     public void render () {
         dropCreationCounter += Gdx.graphics.getDeltaTime();
-        if (dropCreationCounter >= dropTimer) {
+        while (dropCreationCounter >= dropTimer) {
             dropCreationCounter -= dropTimer;
             drops.add(new Point2D.Float(rand.nextInt(800), 630));
         }
@@ -104,7 +106,7 @@ public class GameRainIngame extends ApplicationAdapter implements ApplicationLis
             System.exit(0);
         }
 
-        Gdx.gl.glClearColor( 0.7f, 0.7f, 0.7f, 1 );
+        Gdx.gl.glClearColor( 0.3f, 0.3f, 0.3f, 1 );
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         batch.begin();
@@ -116,7 +118,7 @@ public class GameRainIngame extends ApplicationAdapter implements ApplicationLis
 
         batch.setShader(shRain);
         for (Point2D.Float pt : drops) {
-            batch.draw(texRect, pt.x, pt.y, 10, 10);
+            batch.draw(drop, pt.x, pt.y, 7, 7);
         }
 
         batch.end();

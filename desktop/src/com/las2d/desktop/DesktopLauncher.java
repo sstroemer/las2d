@@ -10,6 +10,7 @@ public class DesktopLauncher {
 		LwjglApplicationConfiguration config = new LwjglApplicationConfiguration();
 		config.width  = 800;
 		config.height = 600;
-		new LwjglApplication(new GameRainIngame(), config);
+		config.vSyncEnabled = false;
+		new LwjglApplication(new GameLightning(), config);
 	}
 }
